@@ -1,0 +1,38 @@
+📂 GUIA RÁPIDO DE COMANDOS DOCKER - PROJETO ENEL
+🚀 INICIAR O SISTEMA
+
+docker-compose up : Liga todos os serviços (Django, Redis, Worker, Beat).
+
+docker-compose up --build : Reconstrói as imagens (use se mudar o requirements.txt).
+
+docker-compose up -d : Inicia em segundo plano (libera o terminal).
+
+🛑 PARAR O SISTEMA
+
+Ctrl + C : Para os containers no terminal ativo.
+
+docker-compose stop : Desliga os containers (mantém os dados salvos).
+
+docker-compose down -v : Limpeza total. Remove containers, redes e limpa a fila do Redis.
+
+🛠 COMANDOS DENTRO DOS CONTAINERS
+
+docker-compose exec web python manage.py makemigrations : Prepara mudanças no banco.
+
+docker-compose exec web python manage.py migrate : Aplica as mudanças no banco.
+
+docker-compose exec web python manage.py createsuperuser : Cria acesso ao /admin.
+
+📊 MONITORAMENTO E STATUS
+
+docker ps : Lista containers ativos e portas (vê se o Redis/Django caiu).
+
+docker stats : Mostra uso de memória e CPU em tempo real.
+
+docker-compose logs -f : Acompanha os logs/erros de todos os serviços ao vivo.
+
+🔄 REINICIAR SERVIÇOS ESPECÍFICOS
+
+docker-compose restart beat : Reinicia o relógio agendador.
+
+docker-compose restart worker : Reinicia o robô de e-mails.
