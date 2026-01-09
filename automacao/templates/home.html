@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enel Brasil - Gerenciador de Ofícios</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .bg-gradient-enel {
+            background: linear-gradient(135deg, #1e5d2c 0%, #3ba85c 50%, #76c98a 100%);
+        }
+    </style>
+</head>
+<body class="bg-gradient-enel h-screen flex items-center justify-center overflow-hidden">
+
+    <div class="text-center text-white animate-fade-in-up">
+        <div class="mb-6 flex justify-center">
+            <div class="bg-white p-4 rounded-full shadow-2xl">
+                <i class="fa-solid fa-bolt-lightning text-green-600 text-6xl"></i>
+            </div>
+        </div>
+
+        <h1 class="text-5xl font-black tracking-tighter mb-2 uppercase">
+            Enel Brasil
+        </h1>
+        
+        <div class="h-1 w-24 bg-white mx-auto mb-8 rounded-full opacity-50"></div>
+
+        <h2 class="text-3xl font-light mb-1">Bem-Vindo</h2>
+        <p class="text-xl opacity-90 font-medium tracking-wide">Gerenciador de Ofícios</p>
+
+        <div class="mt-12">
+            <a href="{% url 'monitoramento' %}" class="bg-white text-green-700 px-10 py-4 rounded-full font-bold text-lg shadow-lg hover:bg-green-50 transition-all transform hover:scale-105 inline-flex items-center gap-3">
+                Acessar Sistema <i class="fa-solid fa-arrow-right"></i>
+            </a>
+        </div>
+    </div>
+
+    <div class="absolute bottom-6 text-white text-sm opacity-60">
+        &copy; 2025 Enel Brasil - Sistema Interno de Automação
+    </div>
+
+</body>
+</html>

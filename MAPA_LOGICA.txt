@@ -1,0 +1,56 @@
+============================================================
+SISTEMA DE GESTÃO DE OFÍCIOS ENEL - MAPA DE LÓGICA TÉCNICA
+============================================================
+Data de Criação: Janeiro de 2026
+Versão: 1.2 (Filtros de Segurança e Autenticação Ativos)
+
+1. ARQUITETURA GERAL
+------------------------------------------------------------
+O sistema opera sob o framework Django 6.0, utilizando uma 
+arquitetura de processamento híbrida (Automática + Manual) 
+com foco em extração de metadados de documentos PDF e Excel.
+
+2. FLUXO DE INGESTÃO DE DADOS
+------------------------------------------------------------
+A. CAPTURA AUTOMÁTICA (process_emails.py):
+   - O robô acessa a conta de e-mail via protocolo IMAP.
+   - FILTRO DE SEGURANÇA: O assunto do e-mail é validado contra
+     uma lista de palavras-chave (Ofício, IP, Troca de Lâmpada,
+     Iluminação Pública, etc).
+   - ANTI-SPAM: Termos como "Supabase" ou "Newsletter" são 
+     bloqueados automaticamente antes de entrar no banco.
+
+B. ENVIO MANUAL:
+   - Interface web com Drag & Drop que permite o upload de
+     arquivos PDF ou Excel diretamente pelo usuário logado.
+
+3. MOTOR DE EXTRAÇÃO (The Engine)
+------------------------------------------------------------
+Independentemente da entrada, o arquivo é processado pela 
+função 'processar_arquivo_individual':
+
+- ARQUIVOS PDF:
+  * Utiliza a biblioteca 'pdfplumber'.
+  * REGEX 1 (Protocolo): Localiza padrões como "OF N°", "OFÍCIO".
+  * REGEX 2 (Município): Identifica a Prefeitura/Cidade de origem.
+
+- ARQUIVOS EXCEL:
+  * Utiliza 'pandas' e 'openpyxl'.
+  * Mapeia 31 campos específicos da planilha padrão ENEL.
+  * Valida dados de colunas críticas para o relatório.
+
+4. CAMADA DE SEGURANÇA E ACESSO
+------------------------------------------------------------
+- Autenticação: Sistema protegido por Django Auth.
+- Restrição: Todas as views de monitoramento e gestão exigem
+  o decorador @login_required.
+- Layout: Tela de login em Split Screen com identidade visual
+  institucional.
+
+5. STATUS DE PROCESSAMENTO
+------------------------------------------------------------
+Os registros no banco de dados assumem estados:
+[0] Pendente: Dados incompletos ou aguardando triagem.
+[1] Concluído: Processado e pronto para exportação.
+
+============================================================

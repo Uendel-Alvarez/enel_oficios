@@ -1,0 +1,349 @@
+comandos importantes:
+
+python manage.py process_emails
+
+python manage.py runserver
+
+http://127.0.0.1:8000/monitoramento/
+
+
+link da conversa:
+https://gemini.google.com/app/627ad31d142d3cf6?utm_source=app_launcher&utm_medium=owned&utm_campaign=base_all
+
+
+biblioteca do env
+python-dotenv 1.2.1
+pip install python-dotenv 
+
+local do tesseract
+C:\Program Files\Tesseract-OCR\tesseract.exe
+
+
+base.html
+
+ <!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enel Brasil - Gerenciador</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body class="bg-gray-100 flex h-screen overflow-hidden">
+
+    <aside class="w-64 bg-green-800 text-white flex flex-col shadow-xl">
+        <div class="p-6 text-center border-b border-green-700">
+            <h1 class="text-xl font-black uppercase tracking-widest">Enel Brasil</h1>
+            <p class="text-[10px] opacity-70">Gerenciador de Ofícios</p>
+        </div>
+        
+        <nav class="flex-1 p-4 space-y-2">
+            <a href="{% url 'home' %}" class="flex items-center gap-3 p-3 rounded-lg hover:bg-green-700 transition">
+                <i class="fa-solid fa-house w-5"></i> Home
+            </a>
+            <a href="{% url 'monitoramento' %}" class="flex items-center gap-3 p-3 rounded-lg bg-green-900 shadow-inner">
+                <i class="fa-solid fa-chart-line w-5"></i> Monitoramento
+            </a>
+            <a href="#" class="flex items-center gap-3 p-3 rounded-lg hover:bg-green-700 transition opacity-50">
+                <i class="fa-solid fa-gear w-5"></i> Configurações
+            </a>
+        </nav>
+
+        <div class="p-4 border-t border-green-700 text-[10px] text-center opacity-50 uppercase tracking-widest">
+            v 1.0.0 - 2025
+        </div>
+    </aside>
+
+    <main class="flex-1 flex flex-col overflow-hidden">
+        <header class="bg-white shadow-sm p-4 flex justify-end items-center">
+            <div class="flex items-center gap-2 text-sm text-gray-600">
+                <i class="fa-solid fa-circle-user text-green-700 text-xl"></i>
+                <span>Usuário Enel</span>
+            </div>
+        </header>
+
+        <section class="flex-1 overflow-y-auto p-8">
+            {% block content %}
+            {% endblock %}
+        </section>
+    </main>
+
+</body>
+</html>
+
+
+ {% extends 'base.html' %}
+
+{% block content %}
+<div class="mb-6">
+    <h2 class="text-2xl font-bold text-gray-800">Monitoramento de Ofícios</h2>
+    <p class="text-sm text-gray-500">Lista de documentos capturados via Gmail</p>
+</div>
+
+<div class="bg-white shadow-md rounded-xl overflow-hidden border border-gray-200">
+    <table class="min-w-full text-left">
+        <thead class="bg-gray-50 border-b border-gray-200">
+            <tr>
+                <th class="px-6 py-4 text-xs font-bold text-gray-500 uppercase">Data</th>
+                <th class="px-6 py-4 text-xs font-bold text-green-700 uppercase">Município</th>
+                <th class="px-6 py-4 text-xs font-bold text-gray-500 uppercase">Nº Protocolo</th>
+                <th class="px-6 py-4 text-xs font-bold text-gray-500 uppercase text-center">Status</th>
+                <th class="px-6 py-4 text-xs font-bold text-gray-500 uppercase text-right">Arquivo</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100">
+            {% for oficio in oficios %}
+            <tr class="hover:bg-gray-50 transition">
+                <td class="px-6 py-4 text-sm text-gray-600">
+                    {{ oficio.data_recebimento|date:"d/m/Y H:i" }}
+                </td>
+                <td class="px-6 py-4 text-sm font-bold text-gray-800">
+                    {{ oficio.municipio|default:"Não Identificado" }}
+                </td>
+                <td class="px-6 py-4 text-sm font-mono text-blue-600">
+                    {{ oficio.numero_protocolo }}
+                </td>
+                <td class="px-6 py-4 text-center">
+                    {% if oficio.status_processamento == 1 %}
+                        <span class="text-green-600 bg-green-50 px-2 py-1 rounded text-[10px] font-bold uppercase border border-green-100">Lido</span>
+                    {% else %}
+                        <span class="text-amber-600 bg-amber-50 px-2 py-1 rounded text-[10px] font-bold uppercase border border-amber-100">Pendente</span>
+                    {% endif %}
+                </td>
+                <td class="px-6 py-4 text-right">
+                     {% if oficio.caminho_arquivo %}
+                         <a href="/media/{{ oficio.caminho_arquivo }}" target="_blank" 
+                            class="text-green-700 hover:underline font-bold text-xs flex items-center justify-end gap-1">
+                             <i class="fa-solid fa-file-pdf"></i> VER PDF
+                         </a>
+                     {% else %}
+                         <span class="text-gray-400 text-[10px] italic">Sem anexo</span>
+                     {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
+
+
+utils.py (trecho):
+
+def importar_itens_seguro(caminho_excel, oficio_obj):
+    df = pd.read_excel(caminho_excel)
+    df.columns = [str(c).strip() for c in df.columns]
+
+    for _, row in df.iterrows():
+        dados = {'oficio_pai': oficio_obj}
+        
+        for nome_excel, campo_model in MAPEAMENTO_ESTRITUALIZADO.items():
+            # [cite_start]Busca flexível para evitar erros com nomes longos [cite: 1]
+            coluna_real = next((c for c in df.columns if nome_excel in c), None)
+            
+            if coluna_real:
+                valor = row[coluna_real]
+                
+                # Tratamento de Data
+                if campo_model == 'data_modificacao' and pd.notnull(valor):
+                    valor = pd.to_datetime(valor).date()
+                
+                # [cite_start]Tratamento de Números para campos obrigatórios [cite: 1]
+                if campo_model in ['idg', 'numero_uc', 'numero_plaqueta']:
+                    try:
+                        valor = int(float(valor)) if pd.notnull(valor) else 0
+                    except:
+                        valor = 0
+                
+                dados[campo_model] = valor
+        
+        ItemPlanilhaEnel.objects.create(**dados)
+
+
+
+ from django.db import models
+from django.contrib.auth.models import User # Importe o modelo de Usuário
+from django.utils import timezone
+
+class OficioEnel(models.Model):
+    # ... campos que você já tem (assunto, data_recebimento, etc) ...
+    
+    # NOVOS CAMPOS:
+    responsavel = models.ForeignKey(
+        User, 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True, 
+        verbose_name="Responsável"
+    )
+    prazo = models.DateField("Prazo Limite", null=True, blank=True)
+
+    # Método para ajudar o template a mostrar se está atrasado (como na foto)
+    @property
+    def esta_atrasado(self):
+        if self.prazo and self.prazo < timezone.now().date() and self.status_processamento != 2: # 2 = Concluído
+            return True
+        return False
+
+    def __str__(self):
+        return f"{self.numero_protocolo} - {self.municipio}"    
+
+
+
+
+
+
+
+
+oficio_list.htnl
+
+<div class="bg-white p-4 rounded-t-xl border border-gray-100 flex flex-wrap gap-4 items-end">
+        <div class="flex-1 min-w-[200px]">
+            <label class="text-xs font-bold text-gray-500 mb-1 block uppercase">Buscar</label>
+            <input type="text" placeholder="Buscar por protocolo ou órgão" class="w-full border-gray-200 rounded-lg text-sm">
+        </div>
+        <div>
+            <label class="text-xs font-bold text-gray-500 mb-1 block uppercase">Status</label>
+            <select class="border-gray-200 rounded-lg text-sm"><option>Todos</option></select>
+        </div>
+        <button class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg text-sm font-bold transition">
+            + Novo Ofício
+        </button>
+    </div>
+
+
+
+
+
+
+
+
+    base.html
+
+
+     <div class="py-2">
+                <button class="w-full flex items-center justify-between p-3 text-green-700 bg-green-50 rounded-lg font-medium">
+                    <div class="flex items-center gap-3"><i class="fa-solid fa-file-lines w-5"></i> Ofícios</div>
+                    <i class="fa-solid fa-chevron-down text-xs"></i>
+                </button>
+                <div class="ml-10 mt-2 space-y-2 text-sm text-gray-500">
+                    <p class="hover:text-green-600 cursor-pointer">Todos</p>
+                    <p class="hover:text-green-600 cursor-pointer">Pendentes de Dados</p>
+                </div>
+            </div>
+
+
+
+process_emails (original)
+
+import os
+import unicodedata
+import pdfplumber
+import re
+import pandas as pd
+from django.core.management.base import BaseCommand
+from django.utils.timezone import make_aware, is_aware
+from django.conf import settings
+from imap_tools import MailBox
+from automacao.models import OficioEnel, ItemPlanilhaEnel
+from automacao.utils import importar_itens_seguro
+
+def executar_captura():
+    EMAIL_HOST = 'imap.gmail.com'
+    EMAIL_USER = os.getenv('EMAIL_USER')
+    EMAIL_PASSWORD = os.getenv('EMAIL_PASSWORD')
+
+    if not EMAIL_USER or not EMAIL_PASSWORD:
+        return "Erro: Credenciais ausentes no .env"
+
+    # --- Configuração de Busca ---
+    KEYWORDS_RAW = ['ofícios', 'prefeitura', 'iluminação publica', 'secretaria', 'tribunal']
+    def normalize_text(text):
+        return unicodedata.normalize('NFD', text).encode('ascii', 'ignore').decode('utf-8').upper()
+    
+    KEYWORDS = [normalize_text(k) for k in KEYWORDS_RAW]
+    query_parts = [f'SUBJECT "{k}"' for k in KEYWORDS] + [f'BODY "{k}"' for k in KEYWORDS]
+    query = "OR " * (len(query_parts) - 1) + " ".join(query_parts)
+
+    try:
+        with MailBox(EMAIL_HOST).login(EMAIL_USER, EMAIL_PASSWORD) as mailbox:
+            for msg in mailbox.fetch(query, limit=10, reverse=True):
+                
+                # 1. Evita Duplicados
+                if OficioEnel.objects.filter(assunto=msg.subject, data_recebimento=msg.date).exists():
+                    continue
+
+                # 2. Prepara Data e Pastas (Usando MEDIA_ROOT para permissões)
+                data_email = msg.date if is_aware(msg.date) else make_aware(msg.date)
+                download_path = os.path.join(settings.MEDIA_ROOT, 'anexos')
+                if not os.path.exists(download_path): os.makedirs(download_path)
+
+                # 3. CRIA O OFÍCIO PAI PRIMEIRO (Obrigatório para os itens terem um dono)
+                novo_oficio = OficioEnel.objects.create(
+                    assunto=msg.subject,
+                    data_recebimento=data_email,
+                    remetente=msg.from_,
+                    corpo_email=msg.text[:500] if msg.text else "Sem conteúdo",
+                    status_processamento=0 # Começa como pendente
+                )
+
+                protocolo_detectado = "Não identificado"
+                municipio_detectado = "Não identificado"
+                qtd_anexos = 0
+
+                # 4. LOOP DE ANEXOS
+                for att in msg.attachments:
+                    qtd_anexos += 1
+                    extensao = att.filename.lower()
+                    caminho_arquivo = os.path.join(download_path, att.filename)
+
+                    # Salva o arquivo fisicamente
+                    with open(caminho_arquivo, 'wb') as f:
+                        f.write(att.payload)
+
+                    # CASO A: É o Ofício em PDF (Tentar extrair dados do cabeçalho)
+                    if extensao.endswith('.pdf'):
+                        try:
+                            with pdfplumber.open(caminho_arquivo) as pdf:
+                                texto = "".join([page.extract_text() or "" for page in pdf.pages])
+                                
+                                # Regex para Protocolo
+                                padrao_of = re.search(r"(?:OFÍCIO|OF|Ofício)\s*(?:N°|NO|N|/|nº)?\s*([A-Za-z0-9/\-\.]+)", texto, re.IGNORECASE)
+                                if padrao_of: protocolo_detectado = padrao_of.group(0).strip()
+                                
+                                # Regex para Município
+                                padrao_mun = re.search(r"(?:Município de|PREFEITURA MUNICIPAL DE)\s+([A-ZÀ-Ú\s\-]{3,})", texto, re.IGNORECASE)
+                                if padrao_mun: municipio_detectado = padrao_mun.group(1).strip().split('\n')[0][:50]
+                        except: pass
+
+                    # CASO B: É a Planilha de 31 campos
+                    elif extensao.endswith('.xlsx'):
+                        try:
+                            # Chama a função que criamos no utils.py para preencher os 31 campos
+                            importar_itens_seguro(caminho_arquivo, novo_oficio)
+                        except Exception as e:
+                            print(f"Erro ao processar planilha {att.filename}: {e}")
+
+                # 5. ATUALIZA O PAI COM OS DADOS DETECTADOS
+                novo_oficio.numero_protocolo = protocolo_detectado
+                novo_oficio.municipio = municipio_detectado
+                novo_oficio.quantidade_anexos = qtd_anexos
+                novo_oficio.caminho_arquivo = download_path
+                novo_oficio.status_processamento = 1 if protocolo_detectado != "Não identificado" else 0
+                novo_oficio.save()
+
+                print(f"Sucesso: {msg.subject} processado.")
+
+        return "Captura finalizada com sucesso."
+    except Exception as e:
+        return f"Erro Geral: {e}"
+
+class Command(BaseCommand):
+    help = 'Executa a captura de e-mails da ENEL'
+    def handle(self, *args, **options):
+        self.stdout.write("Iniciando...")
+        msg = executar_captura()
+        self.stdout.write(msg)
+
+        

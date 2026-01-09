@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerenciador de Ofícios</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body class="bg-slate-50 flex h-screen overflow-hidden">
+
+    <aside class="w-64 bg-white border-r border-gray-200 flex flex-col shadow-sm">
+        <div class="p-6 flex items-center gap-3">
+            <div class="bg-green-600 p-2 rounded-lg">
+                <i class="fa-solid fa-bolt-lightning text-white"></i>
+            </div>
+            <h1 class="text-green-700 font-bold text-lg tracking-tight">Gerenciador de Ofícios</h1>
+        </div>
+        
+        <nav class="flex-1 px-4 space-y-1 overflow-y-auto">
+        <div class="space-y-1">
+            <button type="button" 
+                    onclick="toggleDropdown('oficiosMenu')"
+                    class="flex items-center justify-between w-full px-4 py-3 text-gray-400 hover:bg-gray-800 hover:text-green-500 transition-all rounded-lg group">
+                <div class="flex items-center gap-3">
+                     <i class="fas fa-file-alt w-5 text-gray-500 group-hover:text-green-500"></i>
+                     <span class="font-medium">Ofícios</span>
+                </div>
+                <i class="fas fa-chevron-down text-xs transition-transform duration-200" id="oficiosChevron"></i>
+            </button>
+
+            <div id="oficiosMenu" class="hidden pl-10 space-y-1">
+               <a href="{% url 'listagem_oficios' %}" 
+                  class="flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-all
+                  {% if request.resolver_match.url_name == 'listagem_oficios' %} 
+                     bg-green-600 text-white 
+                  {% else %} 
+                     text-gray-400 hover:text-green-500 
+                  {% endif %}">
+                   <span>Todos</span>
+               </a>
+
+               <a href="{% url 'listagem_pendentes' %}" 
+                  class="flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-all
+                  {% if request.resolver_match.url_name == 'listagem_pendentes' %} 
+                     bg-green-600 text-white 
+                  {% else %} 
+                     text-gray-400 hover:text-green-500 
+                  {% endif %}">
+                   <span>Pendentes de Dados</span>
+                </a>
+            </div>
+        </div>
+            <a href="#" class="flex items-center justify-between p-3 text-gray-600 hover:bg-gray-50 rounded-lg">
+                <div class="flex items-center gap-3"><i class="fa-solid fa-folder w-5"></i> Cadastros</div>
+                <i class="fa-solid fa-chevron-right text-xs"></i>
+            </a>
+            <a href="{% url 'upload_manual' %}" 
+                class="flex items-center gap-3 px-4 py-3 transition-all rounded-lg group
+                {% if request.resolver_match.url_name == 'upload_manual' %} 
+                    bg-green-600 text-white 
+                {% else %} 
+                    text-gray-400 hover:bg-gray-800 hover:text-green-500 
+                {% endif %}">
+                  <i class="fas fa-upload w-5 {% if request.resolver_match.url_name == 'upload_manual' %}text-white{% else %}text-gray-500 group-hover:text-green-500{% endif %}"></i>
+                  <span class="font-medium">Envio Manual</span>
+            </a>
+            <a href="{% url 'monitoramento' %}" 
+               class="flex items-center gap-3 px-4 py-3 transition-all rounded-lg group
+               {% if request.resolver_match.url_name == 'monitoramento' %} 
+                  bg-green-600 text-white shadow-md
+               {% else %} 
+                  text-gray-400 hover:bg-gray-800 hover:text-green-500 
+               {% endif %}">
+                  <i class="fas fa-desktop w-5 {% if request.resolver_match.url_name == 'monitoramento' %}text-white{% else %}text-gray-500 group-hover:text-green-500{% endif %}"></i>
+                  <span class="font-medium">Monitoramento</span>
+            </a>
+            <a href="#" class="flex items-center gap-3 p-3 text-gray-600 hover:bg-gray-50 rounded-lg">
+                <i class="fa-solid fa-chart-simple w-5"></i> Relatórios
+            </a>
+            <a href="#" class="flex items-center gap-3 p-3 text-gray-600 hover:bg-gray-50 rounded-lg">
+                <i class="fa-solid fa-gear w-5"></i> Configurações
+            </a>
+            <a href="#" class="flex items-center gap-3 p-3 text-gray-600 hover:bg-gray-50 rounded-lg">
+                <i class="fa-solid fa-list-ul w-5"></i> Logs
+            </a>
+        </nav>
+    </aside>
+
+    <main class="flex-1 flex flex-col">
+        <header class="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-8">
+            <div class="relative w-1/3">
+                <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                <input type="text" placeholder="Buscar por protocolo, órgão ou tipo..." 
+                       class="w-full pl-10 pr-4 py-2 bg-gray-100 border-none rounded-md text-sm focus:ring-2 focus:ring-green-500">
+            </div>
+            <div class="flex items-center gap-4">
+                <div class="relative">
+                    <i class="fa-regular fa-bell text-gray-500 text-xl"></i>
+                    <span class="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] rounded-full px-1">3</span>
+                </div>
+                <div class="flex items-center gap-2 border-l pl-4">
+                    <div class="bg-green-600 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold">AD</div>
+                    <div class="text-xs">
+                        <p class="font-bold text-gray-800">admin</p>
+                        <p class="text-gray-500">Gestor <i class="fa-solid fa-chevron-down text-[10px]"></i></p>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <section class="p-8 overflow-y-auto">
+            {% block content %}{% endblock %}
+        </section>
+    </main>
+
+    <script>
+    function toggleDropdown(id) {
+        const menu = document.getElementById(id);
+        const chevron = document.getElementById('chevron-oficios');
+        
+        // Alterna a classe 'hidden' para mostrar/esconder
+        menu.classList.toggle('hidden');
+        
+        // Gira a setinha
+        chevron.classList.toggle('rotate-180');
+    }
+
+    // Opcional: Manter aberto se estiver na página de ofícios
+    window.addEventListener('DOMContentLoaded', () => {
+        if (window.location.pathname.includes('/oficios/')) {
+            document.getElementById('oficios-menu').classList.remove('hidden');
+            document.getElementById('chevron-oficios').classList.add('rotate-180');
+        }
+    });
+    </script>
+</body>
+</html>

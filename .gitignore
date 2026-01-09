@@ -1,0 +1,21 @@
+# Ambiente Virtual
+.venv/
+env/
+venv/
+ENV/
+
+# Configurações sensíveis (Senhas)
+.env
+
+# Banco de dados local (SQLite)
+db.sqlite3
+
+# Arquivos compilados do Python
+**/__pycache__/
+*.pyc
+
+# Pasta de downloads (para não subir os PDFs dos ofícios)
+downloads_enel/
+
+# Pastas do VS Code
+.vscode/

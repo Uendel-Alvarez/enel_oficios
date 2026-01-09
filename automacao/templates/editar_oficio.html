@@ -1,0 +1,80 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="p-6 bg-gray-50 min-h-screen flex justify-center items-start">
+    <div class="bg-white rounded-xl shadow-lg border border-gray-100 w-full max-w-lg overflow-hidden">
+        <div class="bg-green-600 p-4">
+            <h2 class="text-white font-bold flex items-center gap-2">
+                <i class="fas fa-file-signature"></i> 
+                Editar Ofício: {{ oficio.numero_protocolo|default:"[SEM PROTOCOLO]" }}
+            </h2>
+        </div>
+        
+    <form method="POST" class="p-6 space-y-4">
+    {% csrf_token %}
+    
+    <div class="bg-gray-50 p-3 rounded-lg border-l-4 border-blue-400">
+        <label class="text-[10px] font-bold text-gray-400 uppercase">Assunto Original do E-mail</label>
+        <p class="text-sm text-gray-600 italic leading-tight">{{ oficio.assunto }}</p>
+    </div>
+
+    {% for field in form %}
+        <div class="mb-4">
+            <label class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                {{ field.label }}
+            </label>
+            
+            <div class="mt-1">
+                {# Se for o campo município e estiver vazio, aplicamos a classe de erro #}
+                {% if field.name == "municipio" %}
+                    <div class="{% if not field.value %}field-error-ring{% endif %}">
+                        {{ field }}
+                    </div>
+                {% else %}
+                    {{ field }}
+                {% endif %}
+            </div>
+            
+            {% if field.errors %}
+                <p class="text-red-500 text-[10px] mt-1">{{ field.errors.0 }}</p>
+            {% endif %}
+        </div>
+    {% endfor %}
+
+    <div class="flex gap-3 pt-4">
+        <button type="submit" class="flex-1 bg-green-600 text-white py-2 rounded-lg font-bold hover:bg-green-700 shadow-md transition-all">
+            <i class="fas fa-save mr-2"></i>Salvar Alterações
+        </button>
+        <a href="{% url 'listagem_pendentes' %}" class="flex-1 bg-gray-100 text-gray-600 py-2 rounded-lg font-bold text-center hover:bg-gray-200 transition">
+            Cancelar
+        </a>
+    </div>
+       </form>
+    </div>
+</div>
+
+<style>
+    /* Estilização dos campos gerados pelo Django Form */
+    input, select, textarea {
+        width: 100%;
+        padding: 0.5rem;
+        border: 1px solid #e5e7eb;
+        border-radius: 0.5rem;
+        outline: none;
+        transition: all 0.2s;
+    }
+
+    /* Correção do efeito de foco (substituindo o 'ring' que falhou) */
+    input:focus, select:focus {
+        border-color: #16a34a;
+        /* Cria um anel verde suave usando box-shadow */
+        box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.2);
+    }
+
+    /* Estilo para campos que precisam de atenção (vazios) */
+    .field-error {
+        border-color: #fca5a5 !important;
+        background-color: #fef2f2;
+    }
+</style>
+{% endblock %}

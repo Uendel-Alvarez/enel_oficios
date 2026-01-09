@@ -1,0 +1,69 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="p-8 bg-gray-50 min-h-screen">
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-2xl font-bold text-gray-800 mb-2">Envio Manual</h1>
+        <p class="text-gray-500 mb-8">Faça upload de documentos para processamento via OCR/IA e criação automática de ofícios.</p>
+
+        <div class="bg-white border-2 border-dashed border-gray-200 rounded-2xl p-12 text-center hover:border-green-500 transition-all group relative">
+            <form action="{% url 'upload_manual' %}" method="POST" enctype="multipart/form-data" id="uploadForm">
+                {% csrf_token %}
+                <div class="flex flex-col items-center">
+                    <div class="w-16 h-16 bg-green-50 text-green-600 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                        <i class="fas fa-cloud-upload-alt text-2xl"></i>
+                    </div>
+                    <h3 class="text-lg font-semibold text-gray-700">Arraste e solte seus arquivos aqui</h3>
+                    <p class="text-sm text-gray-400 mt-1">Ou</p>
+                    
+                    <input type="file" name="arquivo" id="fileInput" class="hidden" multiple onchange="submitForm()">
+                    
+                    <label for="fileInput" class="mt-4 bg-green-600 text-white px-8 py-3 rounded-lg font-bold hover:bg-green-700 cursor-pointer shadow-lg shadow-green-200 transition-all inline-block">
+                        Selecionar Arquivos
+                    </label>
+                    
+                    <p class="text-[11px] text-gray-400 mt-6 font-medium uppercase tracking-wider">Formatos aceitos: PDF, XLSX (máx. 10MB)</p>
+                </div>
+            </form>
+
+            <div id="loadingOverlay" class="hidden absolute inset-0 bg-white/80 flex flex-col items-center justify-center rounded-2xl">
+                <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mb-4"></div>
+                <p class="text-green-700 font-bold">Processando documentos com IA...</p>
+            </div>
+        </div>
+
+        <div class="mt-12 grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div class="flex gap-4">
+                <span class="flex-shrink-0 w-10 h-10 bg-green-100 text-green-600 rounded-full flex items-center justify-center font-bold">1</span>
+                <div>
+                    <h4 class="font-bold text-gray-800 text-sm">Adicione os arquivos</h4>
+                    <p class="text-xs text-gray-500 leading-relaxed">Arraste documentos ou clique para selecionar do seu computador.</p>
+                </div>
+            </div>
+            <div class="flex gap-4">
+                <span class="flex-shrink-0 w-10 h-10 bg-green-100 text-green-600 rounded-full flex items-center justify-center font-bold">2</span>
+                <div>
+                    <h4 class="font-bold text-gray-800 text-sm">IA Processando</h4>
+                    <p class="text-xs text-gray-500 leading-relaxed">Nossa tecnologia extrai automaticamente Protocolo e Município.</p>
+                </div>
+            </div>
+            <div class="flex gap-4">
+                <span class="flex-shrink-0 w-10 h-10 bg-green-100 text-green-600 rounded-full flex items-center justify-center font-bold">3</span>
+                <div>
+                    <h4 class="font-bold text-gray-800 text-sm">Ofícios Criados</h4>
+                    <p class="text-xs text-gray-500 leading-relaxed">Os dados aparecem prontos na sua lista de Pendentes para conferência.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function submitForm() {
+        // Mostra o overlay de carregamento
+        document.getElementById('loadingOverlay').classList.remove('hidden');
+        // Envia o formulário
+        document.getElementById('uploadForm').submit();
+    }
+</script>
+{% endblock %}

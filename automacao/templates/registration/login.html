@@ -1,0 +1,79 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login | Sistema de Ofícios</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body class="bg-gray-100">
+
+<div class="flex min-h-screen">
+    <div class="hidden lg:flex lg:w-1/2 bg-green-900 relative items-center justify-center overflow-hidden">
+        <img src="{% static 'images/login_background.jpg' %}" alt="Background" class="absolute inset-0 w-full h-full object-cover opacity-50">
+        
+        <div class="relative z-10 text-center px-12">
+            <h1 class="text-4xl font-extrabold text-white mb-4">Gestão de Ofícios</h1>
+            <p class="text-green-100 text-lg">Processamento inteligente de documentos ENEL.</p>
+        </div>
+    </div>
+
+    <div class="w-full lg:w-1/2 flex items-center justify-center bg-white p-8 sm:p-12">
+        <div class="max-w-md w-full">
+            <div class="mb-10 text-center lg:text-left">
+                <h2 class="text-3xl font-bold text-gray-800 mb-2">Acesso Restrito</h2>
+                <p class="text-gray-500">Insira suas credenciais abaixo.</p>
+            </div>
+
+            <form method="post" class="space-y-6">
+                {% csrf_token %}
+                
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2 uppercase tracking-wide">Usuário</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
+                            <i class="fas fa-user"></i>
+                        </span>
+                        <input type="text" name="username" required 
+                               class="block w-full pl-10 pr-3 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all outline-none" 
+                               placeholder="Seu usuário">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2 uppercase tracking-wide">Senha</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
+                            <i class="fas fa-lock"></i>
+                        </span>
+                        <input type="password" name="password" required 
+                               class="block w-full pl-10 pr-3 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all outline-none" 
+                               placeholder="••••••••">
+                    </div>
+                </div>
+
+                {% if form.errors %}
+                <div class="bg-red-50 text-red-600 p-3 rounded-lg text-sm flex items-center gap-2">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <span>Usuário ou senha incorretos.</span>
+                </div>
+                {% endif %}
+
+                <button type="submit" 
+                        class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg shadow-lg transition-all transform hover:-translate-y-1 active:scale-95 uppercase">
+                    Entrar no Sistema
+                </button>
+            </form>
+
+            <div class="mt-8 text-center">
+                <p class="text-[10px] text-gray-400 uppercase tracking-widest">© 2026 Sistema Integrado de Monitoramento</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>
+
