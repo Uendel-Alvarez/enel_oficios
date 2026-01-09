@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  # O Banco de dados que o Celery usa (Redis)
+  redis:
+    image: redis:alpine
+
+  # O Coração do sistema (Django)
+  web:
+    build: .
+    command: python manage.py runserver 0.0.0.0:8000
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+    depends_on:
+      - redis
+
+  # O Robô que executa as tarefas (Celery Worker)
+  worker:
+    build: .
+    command: celery -A core worker -l info
+    volumes:
+      - .:/app
+    depends_on:
+      - redis
+      - web
+
+  # O Relógio que agenda as tarefas (Celery Beat)
+  beat:
+    build: .
+    command: celery -A core beat -l info
+    volumes:
+      - .:/app
+    depends_on:
+      - redis
+      - web
