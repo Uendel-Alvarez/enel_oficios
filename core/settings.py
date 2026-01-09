@@ -154,7 +154,7 @@ from celery.schedules import crontab
 CELERY_BEAT_SCHEDULE = {
     'capturar-emails-a-cada-30-segundos': {
         'task': 'automacao.tasks.tarefa_captura_emails',
-        'schedule': 30.0,  # Executa a cada 30 segundos
+        'schedule': crontab(minute='*/10'), # O '*/10' significa: a cada dez minutos
     },
 }
 
