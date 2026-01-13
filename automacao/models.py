@@ -1,7 +1,8 @@
 from django.db import models
-from django.contrib.auth.models import User # Importe o modelo de Usuário
+from django.contrib.auth.models import User  # Certifique-se que é 'contrib'
 from django.utils import timezone
 import pandas as pd
+
 
 class OficioEnel(models.Model):
     

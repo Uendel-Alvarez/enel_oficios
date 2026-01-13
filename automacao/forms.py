@@ -37,17 +37,3 @@ class OficioEditForm(forms.ModelForm):
         }
 
 
-"""     
-
-class OficioEditForm(forms.ModelForm):
-    class Meta:
-        model = OficioEnel
-        fields = ['prazo', 'responsavel', 'status_processamento']
-        widgets = {
-            'prazo': forms.DateInput(attrs={'type': 'date', 'class': 'w-full border-gray-200 rounded-lg text-sm'}),
-            'responsavel': forms.Select(attrs={'class': 'w-full border-gray-200 rounded-lg text-sm'}),
-            'status_processamento': forms.Select(attrs={'class': 'w-full border-gray-200 rounded-lg text-sm'}),
-        }
-        
-        
-"""   
