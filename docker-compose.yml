@@ -4,15 +4,19 @@ services:
   # O Banco de dados que o Celery usa (Redis)
   redis:
     image: redis:alpine
+    container_name: enel_redis
 
   # O Coração do sistema (Django)
   web:
     build: .
+    container_name: enel_oficios
     command: python manage.py runserver 0.0.0.0:8000
     volumes:
       - .:/app
     ports:
       - "8000:8000"
+    env_file:
+      - .env
     environment:
       - CELERY_BROKER_URL=redis://redis:6379/0
     depends_on:
@@ -21,9 +25,12 @@ services:
   # O Robô que executa as tarefas (Celery Worker)
   worker:
     build: .
+    container_name: enel_worker
     command: celery -A core worker -l info
     volumes:
       - .:/app
+    env_file:
+      - .env
     depends_on:
       - redis
       - web
@@ -31,9 +38,12 @@ services:
   # O Relógio que agenda as tarefas (Celery Beat)
   beat:
     build: .
+    container_name: enel_beat
     command: celery -A core beat -l info
     volumes:
       - .:/app
+    env_file:
+      - .env
     depends_on:
       - redis
       - web

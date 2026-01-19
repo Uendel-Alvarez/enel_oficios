@@ -1,16 +1,10 @@
 {
     "name": "Projeto Enel - Django & IA",
-    "dockerComposeFile": [
-        "../docker-compose.yml"
-    ],
-    "service": "web",
+    "image": "mcr.microsoft.com/devcontainers/python:3.11",
     "workspaceFolder": "/app",
     "features": {
-        "ghcr.io/devcontainers/features/git:1": {
-            "preserveRootCollections": true
-        },
+        "ghcr.io/devcontainers/features/git:1": {},
         "ghcr.io/devcontainers/features/common-utils:1": {
-            "installZsh": true,
             "configureZshAsDefaultShell": true
         }
     },
@@ -20,19 +14,17 @@
                 "ms-python.python",
                 "ms-python.vscode-pylance",
                 "batisteo.vscode-django",
-                "njpwerner.autodocstring",
-                "tamasfe.even-better-toml",
-                "mhutchie.git-graph",
-                "eamodio.gitlens"
+                "njpwerner.autodocstring"
             ],
             "settings": {
-                "python.defaultInterpreterPath": "/usr/local/bin/python",
                 "python.analysis.typeCheckingMode": "basic",
-                "python.languageServer": "Pylance",
-                "terminal.integrated.defaultProfile.linux": "zsh"
+                "python.languageServer": "Pylance"
             }
         }
     },
-    "remoteUser": "root",
-    "postCreateCommand": "pip install -U google-generativeai"
+    "remoteUser": "vscode",
+    "mounts": [
+        "source=${localWorkspaceFolder},target=/app,type=bind"
+    ],
+    "postCreateCommand": "pip install -r requirements.txt && pip install google-generativeai pymupdf"
 }
