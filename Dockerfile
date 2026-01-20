@@ -16,7 +16,7 @@ RUN apt-get update && apt-get install -y \
 
 # 5. Instala as bibliotecas do seu projeto
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install -r requirements.txt
 
 # 6. Copia todo o seu código para dentro do container
 COPY . .

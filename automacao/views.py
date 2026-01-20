@@ -18,6 +18,11 @@ from django.shortcuts import render, get_object_or_404, redirect
 from .models import OficioEnel
 from django.contrib import messages
 from .forms import OficioEditForm # Certifique-se de que o import está correto
+from .utils_ia import extrair_dados_oficio
+from .models import importar_itens_seguro
+from django.shortcuts import render, get_object_or_404
+from .models import OficioEnel
+
 
 
 @login_required
@@ -136,21 +141,35 @@ def upload_manual(request):
         fs = FileSystemStorage(location=os.path.join(settings.MEDIA_ROOT, 'anexos'))
         
         for f in arquivos:
-            # 1. Cria o registro no banco antes de processar
-            novo_oficio = OficioEnel.objects.create(
-                assunto=f"Upload Manual: {f.name}",
-                data_recebimento=now(),
-                remetente=request.user.username,
-                corpo_email="Arquivo carregado manualmente pelo usuário.",
-                status_processamento=0
-            )
-
-            # 2. Salva o arquivo no disco
+            # 1. Salva o arquivo no disco primeiro
             nome_salvo = fs.save(f.name, f)
             caminho_completo = fs.path(nome_salvo)
 
-            # 3. CHAMA A MESMA INTELIGÊNCIA DO E-MAIL!
-            processar_arquivo_individual(caminho_completo, novo_oficio)
+            # 2. CHAMA A IA PARA LER O CONTEÚDO DO CLIENTE
+            dados_ia = extrair_dados_oficio(caminho_completo)
+            
+            # 3. Cria o registro no banco já com os dados que a IA extraiu
+            # Se a IA falhar, usamos os valores padrão (get)
+            novo_oficio = OficioEnel.objects.create(
+                numero_protocolo=dados_ia.get("numero_protocolo", "NÃO ENCONTRADO"),
+                municipio=dados_ia.get("municipio", "NÃO ENCONTRADO"),
+                orgao_solicitante=dados_ia.get("orgao_solicitante", "NÃO ENCONTRADO"),
+                assunto=dados_ia.get("assunto", f"Upload Manual: {f.name}"),
+                data_recebimento=now(),
+                remetente=request.user.username,
+                caminho_arquivo=nome_salvo,
+                status_processamento=0
+            )
+
+            # 4. SE FOR EXCEL: Chama sua função do models.py para popular os itens detalhados
+            if f.name.endswith(('.xlsx', '.xls')):
+                try:
+                    importar_itens_seguro(caminho_completo, novo_oficio)
+                    messages.success(request, f"Planilha {f.name} e seus itens foram importados!")
+                except Exception as e:
+                    messages.error(request, f"Erro ao importar itens da planilha: {e}")
+            else:
+                messages.success(request, f"Ofício {novo_oficio.numero_protocolo} processado com sucesso!")
             
         return redirect('listagem_pendentes')
     
@@ -196,6 +215,17 @@ def editar_oficio(request, pk):
     # IMPORTANTE: Corrigido o caminho para 'automacao/editar_oficio.html'
     return render(request, 'editar_oficio.html', {
         'form': form, 
+        'oficio': oficio
+    })
+
+
+
+def oficio_detalhe_fragmento(request, oficio_id):
+    # Procura o ofício pelo ID
+    oficio = get_object_or_404(OficioEnel, id=oficio_id)
+    
+    # Renderiza apenas o fragmento do card lateral
+    return render(request, 'automacao/oficio_detalhe_fragmento.html', {
         'oficio': oficio
     })
 

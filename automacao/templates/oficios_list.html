@@ -1,171 +1,107 @@
 {% extends 'base.html' %}
-{% load static %}
 
 {% block content %}
-<div class="p-6 bg-gray-50 min-h-screen">
+<div class="flex flex-col h-[calc(100vh-100px)] overflow-hidden">
     
-    <div class="mb-8">
-        <h1 class="text-2xl font-bold text-gray-800">Listagem de Ofícios</h1>
-        <p class="text-gray-500 text-sm">Gerencie e acompanhe todos os ofícios recebidos</p>
-    </div>
-
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-        <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between">
-            <div>
-                <p class="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Total de Ofícios</p>
-                <h3 class="text-xl font-bold text-gray-700">{{ total_oficios }}</h3>
-                <p class="text-[10px] text-gray-400">Últimos 30 dias</p>
-            </div>
-            <div class="bg-blue-50 p-2 rounded-lg">
-                <i class="fas fa-file-alt text-blue-500"></i>
-            </div>
+    <div class="flex justify-between items-center mb-6 flex-shrink-0">
+        <div>
+            <h1 class="text-2xl font-bold text-slate-800">Gestão de Ofícios</h1>
+            <p class="text-sm text-slate-500">Visualize e processe as demandas recebidas.</p>
         </div>
-
-        <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between">
-            <div>
-                <p class="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Pendentes de Dados</p>
-                <h3 class="text-xl font-bold text-gray-700">{{ pendentes }}</h3>
-                <p class="text-[10px] text-yellow-500 font-medium">Requerem atenção</p>
-            </div>
-            <div class="bg-yellow-50 p-2 rounded-lg">
-                <i class="fas fa-exclamation-triangle text-yellow-500"></i>
-            </div>
-        </div>
-
-        <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between">
-            <div>
-                <p class="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Próximos do Prazo</p>
-                <h3 class="text-xl font-bold text-gray-700">0</h3>
-                <p class="text-[10px] text-gray-400">≤ 3 dias restantes</p>
-            </div>
-            <div class="bg-orange-50 p-2 rounded-lg">
-                <i class="far fa-clock text-orange-500"></i>
-            </div>
-        </div>
-
-        <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between">
-            <div>
-                <p class="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Atrasados</p>
-                <h3 class="text-xl font-bold text-gray-700">{{ atrasados }}</h3>
-                <p class="text-[10px] text-red-500 font-medium">Prazo vencido</p>
-            </div>
-            <div class="bg-red-50 p-2 rounded-lg">
-                <i class="fas fa-check-circle text-red-500"></i>
-            </div>
+        <div class="flex space-x-3">
+            <button class="flex items-center px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 transition-all text-sm font-medium">
+                <i data-lucide="filter" class="w-4 h-4 mr-2"></i> Filtrar
+            </button>
+            <button class="flex items-center px-4 py-2 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-all text-sm font-medium shadow-sm">
+                <i data-lucide="download" class="w-4 h-4 mr-2"></i> Exportar
+            </button>
         </div>
     </div>
 
-    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+    <div class="grid grid-cols-12 gap-6 flex-1 min-h-0">
         
-        <form method="GET" action="{% url 'listagem_oficios' %}" 
-              class="p-4 flex flex-wrap gap-4 items-end border-b border-gray-100 bg-white">
-            
-            <div class="flex-1 min-w-[250px]">
-                <label class="text-[10px] font-bold text-gray-400 mb-1 block uppercase tracking-wider">Buscar</label>
-                <div class="relative">
-                    <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
-                        <i class="fas fa-search text-xs"></i>
-                    </span>
-                    <input type="text" name="buscar" value="{{ termo_busca|default:'' }}" 
-                           placeholder="Buscar por protocolo ou órgão..." 
-                           class="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all">
-                </div>
+        <div class="col-span-12 lg:col-span-7 bg-white rounded-3xl border border-slate-200 shadow-sm flex flex-col min-h-0">
+            <div class="overflow-y-auto flex-1 custom-scrollbar"> <table class="w-full text-left border-collapse">
+                    <thead class="sticky top-0 bg-slate-50 z-10">
+                        <tr class="border-b border-slate-100">
+                            <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Protocolo/Ofício</th>
+                            <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Município</th>
+                            <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Data</th>
+                            <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-center">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-50">
+                        {% for oficio in oficios %}
+                        <tr class="hover:bg-slate-50/80 transition-colors group">
+                            <td class="px-6 py-4 font-medium text-slate-700">
+                                {{ oficio.numero_protocolo|default:"Pendente..." }}
+                            </td>
+                            <td class="px-6 py-4">
+                                <span class="px-2 py-1 rounded-lg bg-blue-50 text-blue-600 text-xs font-semibold">
+                                    {{ oficio.municipio|default:"Não Identificado" }}
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 text-sm text-slate-500">
+                                {{ oficio.data_recebimento|date:"d/m/Y" }}
+                            </td>
+                            <td class="px-6 py-4 text-center">
+                                <button 
+                                    hx-get="{% url 'oficio_detalhe_fragmento' oficio.id %}" 
+                                    hx-target="#painel-detalhes"
+                                    hx-swap="innerHTML"
+                                    hx-indicator="#loader"
+                                    class="inline-flex items-center justify-center p-2 text-slate-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-all border border-transparent hover:border-green-100"
+                                    title="Ver detalhes">
+                                    <i data-lucide="eye" class="w-5 h-5"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
             </div>
-
-            <div class="w-48">
-                <label class="text-[10px] font-bold text-gray-400 mb-1 block uppercase tracking-wider">Status</label>
-                <select name="status" onchange="this.form.submit()" 
-                        class="w-full border border-gray-200 rounded-lg text-sm py-2 px-3 focus:ring-2 focus:ring-green-500 outline-none">
-                    <option value="Todos">Todos os Status</option>
-                    <option value="0" {% if request.GET.status == "0" %}selected{% endif %}>Pendente</option>
-                    <option value="1" {% if request.GET.status == "1" %}selected{% endif %}>Concluído</option>
-                </select>
-            </div>
-
-            <div class="mb-2">
-                <a href="{% url 'listagem_oficios' %}" class="text-[10px] text-gray-400 hover:text-red-500 underline font-medium transition-colors">
-                    Limpar Filtros
-                </a>
-            </div>
-
-            <div class="flex gap-2 ml-auto">
-                <a href="{% url 'exportar_oficios_csv' %}?{{ request.GET.urlencode }}" 
-                    class="bg-gray-100 hover:bg-gray-200 text-gray-600 px-4 py-2 rounded-lg text-sm font-bold transition-all flex items-center gap-2">
-                        <i class="fas fa-file-csv"></i> Exportar CSV
-                </a>
-                <button type="button" class="bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-lg text-sm font-bold shadow-sm transition-all">
-                    + Novo Ofício
-                </button>
-            </div>
-        </form>
-
-        <div class="overflow-x-auto">
-            <table class="min-w-full text-sm">
-                <thead class="bg-gray-50/50">
-                    <tr class="text-left text-[10px] font-bold text-gray-500 uppercase tracking-wider">
-                        <th class="px-6 py-4 border-b border-gray-100">Protocolo</th>
-                        <th class="px-6 py-4 border-b border-gray-100">Órgão Solicitante</th>
-                        <th class="px-6 py-4 border-b border-gray-100">Status</th>
-                        <th class="px-6 py-4 border-b border-gray-100">Prazo</th>
-                        <th class="px-6 py-4 border-b border-gray-100">Responsável</th>
-                        <th class="px-6 py-4 border-b border-gray-100">Recebimento</th>
-                        <th class="px-6 py-4 text-center border-b border-gray-100">Ações</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-gray-100">
-                    {% for oficio in oficios %}
-                    <tr class="hover:bg-blue-50/30 transition-colors">
-                        <td class="px-6 py-4 font-bold text-blue-600">{{ oficio.numero_protocolo|default:"-" }}</td>
-                        <td class="px-6 py-4 text-gray-600 font-medium">{{ oficio.municipio|default:"-" }}</td>
-                        <td class="px-6 py-4">
-                            <span class="px-3 py-1 rounded-full text-[10px] font-bold uppercase 
-                                {% if oficio.status_processamento == 1 %}bg-green-100 text-green-700
-                                {% else %}bg-yellow-100 text-yellow-700{% endif %}">
-                                {{ oficio.get_status_processamento_display }}
-                            </span>
-                        </td>
-                        <td class="px-6 py-4">
-                            {% if oficio.esta_atrasado %}
-                                <div class="leading-tight">
-                                    <p class="text-gray-400 text-[10px]">{{ oficio.prazo|date:"d/m/Y" }}</p>
-                                    <p class="text-red-600 font-bold uppercase text-[10px]">Atrasado</p>
-                                </div>
-                            {% elif oficio.prazo %}
-                                <p class="text-gray-600">{{ oficio.prazo|date:"d/m/Y" }}</p>
-                            {% else %}
-                                <span class="text-gray-300">-</span>
-                            {% endif %}
-                        </td>
-                        <td class="px-6 py-4">
-                            {% if oficio.responsavel %}
-                                <div class="flex items-center gap-2">
-                                    <div class="bg-green-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-[10px] font-bold">
-                                        {{ oficio.responsavel.username|slice:":1"|upper }}
-                                    </div>
-                                    <span class="text-gray-600 text-xs">{{ oficio.responsavel.get_full_name|default:oficio.responsavel.username }}</span>
-                                </div>
-                            {% else %}
-                                <span class="text-gray-300">-</span>
-                            {% endif %}
-                        </td>
-                        <td class="px-6 py-4 text-gray-500 text-xs">{{ oficio.data_recebimento|date:"d/m/Y" }}</td>
-                        <td class="px-6 py-4 text-center">
-                            <div class="flex justify-center gap-3 text-gray-400">
-                                <button class="hover:text-blue-600 transition-colors"><i class="far fa-eye"></i></button>
-                                <button class="hover:text-green-600 transition-colors"><i class="far fa-edit"></i></button>
-                            </div>
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="7" class="px-6 py-12 text-center text-gray-400 italic">
-                            Nenhum ofício encontrado com os filtros selecionados.
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
         </div>
+
+        <div id="painel-detalhes" class="col-span-12 lg:col-span-5 bg-white rounded-3xl border border-slate-200 shadow-sm relative overflow-y-auto custom-scrollbar min-h-0">
+            <div class="flex flex-col items-center justify-center h-full p-12 text-center text-slate-400">
+                <i data-lucide="mouse-pointer-2" class="w-12 h-12 mb-4 opacity-20"></i>
+                <p class="text-sm font-medium">Selecione um ofício para visualizar</p>
+            </div>
+        </div>
+
     </div>
 </div>
+
+<div id="loader" class="htmx-indicator fixed inset-0 bg-slate-900/10 backdrop-blur-[2px] z-[60] flex items-center justify-center hidden">
+    <div class="bg-white p-4 rounded-2xl shadow-xl flex items-center space-x-3">
+        <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-green-600"></div>
+        <span class="text-sm font-medium text-slate-600">Carregando detalhes...</span>
+    </div>
+</div>
+
+<script>
+    // Inicializa ícones na carga da página
+    lucide.createIcons();
+
+    // Re-inicializa ícones após cada requisição HTMX
+    document.body.addEventListener('htmx:afterOnLoad', function(evt) {
+        lucide.createIcons();
+    });
+
+    // Resolve o problema do loader não aparecer/sumir corretamente
+    document.body.addEventListener('htmx:beforeRequest', function(evt) {
+        document.getElementById('loader').classList.remove('hidden');
+    });
+    document.body.addEventListener('htmx:afterRequest', function(evt) {
+        document.getElementById('loader').classList.add('hidden');
+    });
+</script>
+
+<style>
+    /* Barra de rolagem elegante */
+    .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #cbd5e1; }
+</style>
 {% endblock %}
