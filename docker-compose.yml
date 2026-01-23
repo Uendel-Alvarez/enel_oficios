@@ -20,6 +20,7 @@ services:
       - .env
     environment:
       - CELERY_BROKER_URL=redis://redis:6379/0
+      - GEMINI_API_KEY=AIzaSyCbyL9bkVNWwu0HkPCA_Q3HatzZ0ESa8JI
     depends_on:
       - redis
 
@@ -33,6 +34,9 @@ services:
       - ./media:/app/media  # Garante que o robô salve na pasta certa
     env_file:
       - .env
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - GEMINI_API_KEY=AIzaSyCbyL9bkVNWwu0HkPCA_Q3HatzZ0ESa8JI
     depends_on:
       - redis
       - web
@@ -44,9 +48,11 @@ services:
     command: celery -A core beat -l info
     volumes:
       - .:/app
-      - ./media:/app/media  # Permite que o agendador veja os arquivos se necessário
+      - ./media:/app/media
     env_file:
       - .env
+    environment:
+      - GEMINI_API_KEY=AIzaSyCbyL9bkVNWwu0HkPCA_Q3HatzZ0ESa8JI
     depends_on:
       - redis
       - web

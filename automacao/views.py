@@ -113,28 +113,25 @@ def upload_manual(request):
         fs = FileSystemStorage(location=upload_dir)
         
         for f in arquivos:
-            # 1. Salva o arquivo fisicamente
             nome_salvo = fs.save(f.name, f)
             caminho_completo = fs.path(nome_salvo)
 
-            # 2. IA processa o arquivo
+            # IA processa o arquivo
             dados_ia = extrair_dados_oficio(caminho_completo)
             
             if dados_ia is None:
                 messages.warning(request, f"A IA não conseguiu ler os dados de {f.name}.")
                 dados_ia = {}
 
-            # 3. Organiza o resumo da IA para o campo analise_ia
+            # Organiza o resumo da IA
             resumo_ia = (
                 f"DATA DO DOC: {dados_ia.get('data', 'Não identificada')}\n"
                 f"ÓRGÃO: {dados_ia.get('orgao_solicitante', 'Não identificado')}\n\n"
                 f"RESUMO DOS PEDIDOS:\n{dados_ia.get('pedidos_servicos', 'Nenhum detalhe extraído.')}"
             )
 
-            # 4. Define o caminho relativo para o banco
             caminho_relativo_db = os.path.join('anexos', nome_salvo)
 
-            # 5. Criação do registro (Agora com analise_ia existindo no banco)
             novo_oficio = OficioEnel.objects.create(
                 numero_protocolo=dados_ia.get("numero_protocolo", "NÃO ENCONTRADO"),
                 municipio=dados_ia.get("municipio", "NÃO ENCONTRADO"),
@@ -147,7 +144,6 @@ def upload_manual(request):
                 status_processamento=0
             )
 
-            # Lógica para Excel (Mantendo o seu try/except de segurança)
             if f.name.lower().endswith(('.xlsx', '.xls')):
                 try:
                     importar_itens_seguro(caminho_completo, novo_oficio)
@@ -160,6 +156,61 @@ def upload_manual(request):
         return redirect('listagem_pendentes')
     
     return render(request, 'upload_manual.html')
+
+@login_required
+def reanalisar_oficio(request, oficio_id):
+    """
+    FUNÇÃO DO BOTÃO: Tenta processar novamente um arquivo que já está no sistema.
+    Corrigida para evitar erro de NoneType no caminho do arquivo.
+    """
+    oficio = get_object_or_404(OficioEnel, id=oficio_id)
+    
+    # 1. Validação robusta do caminho do arquivo
+    if not oficio.caminho_arquivo:
+        messages.error(request, "Este registro não possui um arquivo vinculado para análise.")
+        return redirect('listagem_pendentes')
+
+    # Monta o caminho absoluto. O campo caminho_arquivo já deve conter 'anexos/nome.pdf'
+    caminho_completo = os.path.join(settings.MEDIA_ROOT, str(oficio.caminho_arquivo))
+    
+    # Debug para o terminal (ajuda a gente a ver se o caminho está certo)
+    print(f"DEBUG: Tentando ler arquivo em: {caminho_completo}")
+
+    if not os.path.exists(caminho_completo):
+        messages.error(request, f"Arquivo físico não encontrado em: {oficio.caminho_arquivo}")
+        return redirect('listagem_pendentes')
+
+    # 2. Chama a IA
+    messages.info(request, "Solicitando reanálise para a Inteligência Artificial...")
+    try:
+        dados_ia = extrair_dados_oficio(caminho_completo)
+        
+        # 3. Verifica se a IA retornou dados válidos
+        if dados_ia and "ERRO" not in str(dados_ia.get('numero_protocolo', '')):
+            oficio.numero_protocolo = dados_ia.get('numero_protocolo')
+            oficio.municipio = dados_ia.get('municipio')
+            oficio.orgao_solicitante = dados_ia.get('orgao_solicitante')
+            oficio.assunto = dados_ia.get('assunto')
+            
+            # Atualiza a analise_ia com os novos dados formatados
+            oficio.analise_ia = (
+                f"DATA DO DOC: {dados_ia.get('data', 'Não identificada')}\n"
+                f"ÓRGÃO: {dados_ia.get('orgao_solicitante', 'Não identificado')}\n\n"
+                f"RESUMO DOS PEDIDOS:\n{dados_ia.get('pedidos_servicos', 'Nenhum detalhe extraído.')}"
+            )
+            
+            oficio.save()
+            messages.success(request, f"Sucesso! Ofício {oficio.id} atualizado.")
+        else:
+            # Caso caia na cota 429 novamente
+            erro_msg = dados_ia.get('assunto', 'Cota excedida') if dados_ia else "Sem resposta."
+            messages.warning(request, f"A IA ainda não conseguiu processar: {erro_msg}")
+            
+    except Exception as e:
+        messages.error(request, f"Erro crítico na reanálise: {e}")
+
+    return redirect('listagem_pendentes')
+
 @login_required
 def editar_oficio(request, pk):
     oficio = get_object_or_404(OficioEnel, pk=pk)

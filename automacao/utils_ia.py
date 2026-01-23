@@ -2,8 +2,9 @@ import os
 import json
 import pandas as pd
 import warnings
-from google import genai
-from google.genai import types 
+import re
+import time
+import google.generativeai as genai
 from dotenv import load_dotenv
 
 # Silencia avisos de validação do Excel
@@ -11,30 +12,27 @@ warnings.filterwarnings("ignore", category=UserWarning, module="openpyxl")
 
 load_dotenv()
 
-# Configuração do Cliente Gemini
-client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+# --- CONFIGURAÇÃO DA CHAVE DIRETA ---
+# Cole sua chave entre as aspas. Verifique se não há espaços extras.
+API_KEY_DIRETA = "AIzaSyCbyL9bkVNWwu0HkPCA_Q3HatzZ0ESa8JI" 
+genai.configure(api_key=API_KEY_DIRETA)
 
-# PROMPT EVOLUÍDO: Focado na complexidade dos modelos de Itaperuna, Magé e Campos
+# PROMPT DE ANÁLISE TÉCNICA
 PROMPT_DEEP_ANALYSIS = """
-Aja como um Perito em Documentos Públicos da Enel Rio. Sua missão é extrair dados técnicos de ofícios municipais de qualquer cidade da área de concessão.
+Aja como um Perito em Documentos Públicos da Enel Rio. Sua missão é extrair dados técnicos de ofícios municipais.
 
-INSTRUÇÕES DE ANÁLISE VISUAL E TEXTUAL:
-1. municipio: Identifique o ente federativo. Olhe para o brasão no topo, o timbre da prefeitura ou frases como "Prefeitura Municipal de...". Extraia apenas o nome da cidade.
-2. numero_protocolo: Procure por identificadores de documento como "Ofício nº", "OF/", "GAPE", "SUOSU", ou qualquer numeração no topo à direita ou esquerda. Capture o identificador completo.
-3. data: Busque a data de emissão. Formate como DD/MM/AAAA.
-4. orgao_solicitante: Identifique qual Secretaria, Subprefeitura ou Gabinete assina o documento.
-5. assunto: Resuma o objetivo do ofício (ex: Atualização de pontos, Substituição por LED, Iluminação de Praça).
-6. pedidos_servicos: Extraia detalhes técnicos: quantidade de lâmpadas, potência (W), tecnologia (LED ou Vapor de Sódio) e locais citados.
+INSTRUÇÕES DE ANÁLISE:
+1. municipio: Identifique pelo brasão, timbre ou cabeçalho. Extraia apenas o nome da cidade.
+2. numero_protocolo: Procure por "Ofício nº", "OF/", "GAPE", "SUOSU". Capture o identificador completo.
+3. data: Formate como DD/MM/AAAA.
+4. orgao_solicitante: Secretaria, Subprefeitura ou Gabinete.
+5. assunto: Resumo do objetivo (ex: Troca de LED, Iluminação de Praça).
+6. pedidos_servicos: Detalhes técnicos (quantidade, potência W, tecnologia).
 
-REGRAS DE OURO:
-- Não se limite aos nomes de cidades conhecidos; se o brasão diz "Prefeitura de [Nome]", esse é o município.
-- Se o documento for um scan (foto) ruim, use sua capacidade de visão para decifrar carimbos e marcas d'água.
-- Caso um campo seja impossível de ler, retorne "NÃO ENCONTRADO".
-- Decifre carimbos e marcas d'água se o scan for ruim.
-- Se não encontrar um campo, retorne "NÃO ENCONTRADO".
+REGRAS:
 - Responda EXCLUSIVAMENTE em formato JSON puro.
+- Se não encontrar um campo, use "NÃO ENCONTRADO".
 
-Responda APENAS o JSON puro:
 {
   "numero_protocolo": "...",
   "municipio": "...",
@@ -44,53 +42,56 @@ Responda APENAS o JSON puro:
   "pedidos_servicos": "..."
 }
 """
+
 def extrair_dados_oficio(caminho_arquivo):
     """
-    Analisa arquivos na pasta media (mapeada no Docker ou local) 
-    e utiliza o Gemini 1.5 Flash para extração multimodal.
+    Extrai dados de PDF ou Excel usando Gemini 2.0 Flash.
     """
     try:
         if not os.path.exists(caminho_arquivo):
-            print(f"⚠️ Arquivo não encontrado no caminho: {caminho_arquivo}")
+            print(f"⚠️ Arquivo não encontrado: {caminho_arquivo}")
             return None
+
+        # Usando o modelo confirmado pela sua lista de modelos
+        model = genai.GenerativeModel('gemini-2.0-flash')
+        #Opção de modelo alternativo
+        #model = genai.GenerativeModel('gemini-2.0-flash-lite')
 
         extensao = os.path.splitext(caminho_arquivo)[1].lower()
         
         if extensao == '.pdf':
-            with open(caminho_arquivo, "rb") as f:
-                pdf_bytes = f.read()
+            # Upload do arquivo para a infra do Google
+            arquivo_gemini = genai.upload_file(path=caminho_arquivo)
             
-            conteudo = [
-                PROMPT_DEEP_ANALYSIS,
-                types.Part.from_bytes(data=pdf_bytes, mime_type="application/pdf")
-            ]
+            # Tempo necessário para o servidor processar o arquivo antes da análise
+            time.sleep(3)
+            
+            response = model.generate_content([PROMPT_DEEP_ANALYSIS, arquivo_gemini])
         
         elif extensao in ['.xlsx', '.xls']:
-            # Lemos as primeiras 50 linhas para captar cabeçalhos espalhados
             df_topo = pd.read_excel(caminho_arquivo).iloc[:50, :15]
-            conteudo = f"{PROMPT_DEEP_ANALYSIS}\n\nCONTEÚDO DA PLANILHA:\n{df_topo.to_string()}"
+            texto_excel = df_topo.to_string()
+            response = model.generate_content(f"{PROMPT_DEEP_ANALYSIS}\n\nCONTEÚDO DA PLANILHA:\n{texto_excel}")
         
         else:
             return None
 
-        # Usando o modelo gemini-1.5-flash que é excelente para OCR e scans
-        response = client.models.generate_content(
-            model="gemini-1.5-flash", 
-            contents=conteudo,
-            config=types.GenerateContentConfig(
-                temperature=0.1,  # Menor temperatura = mais precisão técnica
-            )
-        )
-
-        # Limpeza e extração do JSON da resposta
+        # Extração e limpeza do JSON
         txt = response.text.strip()
-        if "```json" in txt:
-            txt = txt.split("```json")[1].split("```")[0].strip()
-        elif "```" in txt:
-            txt = txt.split("```")[1].strip()
-            
-        return json.loads(txt)
+        # Remove blocos de código markdown se houver
+        txt_limpo = re.sub(r'```json\s*|```', '', txt).strip()
+        
+        # Converte para dicionário Python
+        return json.loads(txt_limpo)
 
     except Exception as e:
-        print(f"❌ Erro na IA (Deep Extraction): {e}")
-        return None
+        print(f"❌ Erro na IA: {e}")
+        return {
+            "numero_protocolo": "ERRO TÉCNICO",
+            "municipio": "VERIFICAR LOGS",
+            "data": "---",
+            "orgao_solicitante": "---",
+            "assunto": f"Erro: {str(e)[:50]}",
+            "pedidos_servicos": "Falha na comunicação."
+        }
+    

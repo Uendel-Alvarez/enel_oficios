@@ -41,4 +41,6 @@ A primeira resposta quase nunca é perfeita. Engenharia de prompt é conversa, n
 
 
 
+Comando para mostrar modelos google.genrativeai obsoletas (deprecated)
+docker-compose exec web python -c "import google.generativeai as genai; genai.configure(api_key='AIzaSyCbyL9bkVNWwu0HkPCA_Q3HatzZ0ESa8JI'); models = genai.list_models(); [print(m.name) for m in models]"
 
