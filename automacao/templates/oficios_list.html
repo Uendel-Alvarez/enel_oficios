@@ -12,16 +12,17 @@
             <button class="flex items-center px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 transition-all text-sm font-medium">
                 <i data-lucide="filter" class="w-4 h-4 mr-2"></i> Filtrar
             </button>
-            <button class="flex items-center px-4 py-2 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-all text-sm font-medium shadow-sm">
+            <a href="{% url 'exportar_oficios_csv' %}" class="flex items-center px-4 py-2 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-all text-sm font-medium shadow-sm">
                 <i data-lucide="download" class="w-4 h-4 mr-2"></i> Exportar
-            </button>
+            </a>
         </div>
     </div>
 
     <div class="grid grid-cols-12 gap-6 flex-1 min-h-0">
         
         <div class="col-span-12 lg:col-span-7 bg-white rounded-3xl border border-slate-200 shadow-sm flex flex-col min-h-0">
-            <div class="overflow-y-auto flex-1 custom-scrollbar"> <table class="w-full text-left border-collapse">
+            <div class="overflow-y-auto flex-1 custom-scrollbar"> 
+                <table class="w-full text-left border-collapse">
                     <thead class="sticky top-0 bg-slate-50 z-10">
                         <tr class="border-b border-slate-100">
                             <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Protocolo/Ofício</th>
@@ -32,12 +33,20 @@
                     </thead>
                     <tbody class="divide-y divide-slate-50">
                         {% for oficio in oficios %}
-                        <tr class="hover:bg-slate-50/80 transition-colors group">
-                            <td class="px-6 py-4 font-medium text-slate-700">
-                                {{ oficio.numero_protocolo|default:"Pendente..." }}
+                        <tr class="hover:bg-slate-50/80 transition-colors group cursor-pointer" 
+                            hx-get="{% url 'oficio_detalhe_fragmento' oficio.id %}" 
+                            hx-target="#painel-detalhes"
+                            hx-indicator="#loader">
+                            <td class="px-6 py-4">
+                                <div class="flex items-center">
+                                    <div class="w-2 h-2 rounded-full mr-3 {% if oficio.status_processamento == 1 %}bg-green-500{% else %}bg-amber-500 animate-pulse{% endif %}"></div>
+                                    <span class="font-medium {% if not oficio.numero_protocolo or oficio.numero_protocolo == 'NÃO ENCONTRADO' %}text-red-400 italic{% else %}text-slate-700{% endif %}">
+                                        {{ oficio.numero_protocolo|default:"Pendente..." }}
+                                    </span>
+                                </div>
                             </td>
                             <td class="px-6 py-4">
-                                <span class="px-2 py-1 rounded-lg bg-blue-50 text-blue-600 text-xs font-semibold">
+                                <span class="px-2 py-1 rounded-lg {% if oficio.municipio == 'NÃO ENCONTRADO' %}bg-red-50 text-red-600{% else %}bg-blue-50 text-blue-600{% endif %} text-[10px] font-bold uppercase">
                                     {{ oficio.municipio|default:"Não Identificado" }}
                                 </span>
                             </td>
@@ -45,16 +54,14 @@
                                 {{ oficio.data_recebimento|date:"d/m/Y" }}
                             </td>
                             <td class="px-6 py-4 text-center">
-                                <button 
-                                    hx-get="{% url 'oficio_detalhe_fragmento' oficio.id %}" 
-                                    hx-target="#painel-detalhes"
-                                    hx-swap="innerHTML"
-                                    hx-indicator="#loader"
-                                    class="inline-flex items-center justify-center p-2 text-slate-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-all border border-transparent hover:border-green-100"
-                                    title="Ver detalhes">
+                                <button class="inline-flex items-center justify-center p-2 text-slate-400 group-hover:text-green-600 group-hover:bg-green-50 rounded-lg transition-all border border-transparent">
                                     <i data-lucide="eye" class="w-5 h-5"></i>
                                 </button>
                             </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="px-6 py-10 text-center text-slate-400 text-sm">Nenhum ofício encontrado.</td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -65,7 +72,7 @@
         <div id="painel-detalhes" class="col-span-12 lg:col-span-5 bg-white rounded-3xl border border-slate-200 shadow-sm relative overflow-y-auto custom-scrollbar min-h-0">
             <div class="flex flex-col items-center justify-center h-full p-12 text-center text-slate-400">
                 <i data-lucide="mouse-pointer-2" class="w-12 h-12 mb-4 opacity-20"></i>
-                <p class="text-sm font-medium">Selecione um ofício para visualizar</p>
+                <p class="text-sm font-medium">Selecione um ofício na lista ao lado para visualizar os detalhes e o PDF</p>
             </div>
         </div>
 
@@ -75,33 +82,14 @@
 <div id="loader" class="htmx-indicator fixed inset-0 bg-slate-900/10 backdrop-blur-[2px] z-[60] flex items-center justify-center hidden">
     <div class="bg-white p-4 rounded-2xl shadow-xl flex items-center space-x-3">
         <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-green-600"></div>
-        <span class="text-sm font-medium text-slate-600">Carregando detalhes...</span>
+        <span class="text-sm font-medium text-slate-600">Lendo documento...</span>
     </div>
 </div>
 
 <script>
-    // Inicializa ícones na carga da página
     lucide.createIcons();
-
-    // Re-inicializa ícones após cada requisição HTMX
     document.body.addEventListener('htmx:afterOnLoad', function(evt) {
         lucide.createIcons();
     });
-
-    // Resolve o problema do loader não aparecer/sumir corretamente
-    document.body.addEventListener('htmx:beforeRequest', function(evt) {
-        document.getElementById('loader').classList.remove('hidden');
-    });
-    document.body.addEventListener('htmx:afterRequest', function(evt) {
-        document.getElementById('loader').classList.add('hidden');
-    });
 </script>
-
-<style>
-    /* Barra de rolagem elegante */
-    .custom-scrollbar::-webkit-scrollbar { width: 6px; }
-    .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-    .custom-scrollbar::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
-    .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #cbd5e1; }
-</style>
 {% endblock %}

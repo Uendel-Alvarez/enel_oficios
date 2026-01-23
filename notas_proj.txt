@@ -4,6 +4,8 @@ python manage.py process_emails
 
 python manage.py runserver
 
+http://127.0.0.1:8000/
+
 http://127.0.0.1:8000/monitoramento/
 
 
@@ -17,5 +19,26 @@ pip install python-dotenv
 
 local do tesseract
 C:\Program Files\Tesseract-OCR\tesseract.exe
+
+
+O Framework de 5 Passos do Google para prompts eficientes
+O curso oficial do Google organiza a engenharia de prompt em cinco pilares fundamentais. Quando um prompt contém esses elementos, a qualidade da resposta muda drasticamente.
+
+1.Persona: quem a IA deve ser
+Sempre comece dizendo quem a IA precisa representar, isso ativa repertórios diferentes dentro do modelo. Em vez de pedir “escreva um e-mail”, diga: “Aja como um gerente de contas sênior especializado em B2B.”
+
+2.Contexto: onde estamos e qual o problema
+A IA não conhece seu negócio, então é sua função explicar o cenário, o objetivo e a dor. Quanto mais claro o contexto, menos genérica será a resposta.
+
+3.Tarefa: o que exatamente deve ser feito
+Evite comandos vagos. Use verbos de ação como criar, analisar, resumir, estruturar ou comparar. A tarefa precisa ser direta.
+
+4.Formato: como a resposta deve ser entregue
+Definir o formato é o que separa prompts amadores de prompts profissionais. Você pode pedir tabelas, listas, e-mails, scripts, códigos ou relatórios.
+
+5.Iteração: o verdadeiro segredo
+A primeira resposta quase nunca é perfeita. Engenharia de prompt é conversa, não comando único. Refinar, ajustar o tom e aprofundar pontos faz parte do processo.
+
+
 
 

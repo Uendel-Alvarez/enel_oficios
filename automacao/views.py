@@ -1,36 +1,24 @@
-from django.shortcuts import render
-from .models import OficioEnel
-from django.db.models import Q # Importante para buscas complexas
-from django.db.models import Count
-from datetime import date
-import csv
-from django.http import HttpResponse
-from django.shortcuts import render, get_object_or_404, redirect
-from .forms import OficioEditForm
 import os
+import csv
+from datetime import date
+from django.shortcuts import render, get_object_or_404, redirect
+from django.http import HttpResponse
+from django.contrib import messages
+from django.db.models import Q
+from django.utils.timezone import now
 from django.conf import settings
 from django.core.files.storage import FileSystemStorage
-from .management.commands.process_emails import Command as EmailProcessor
-from automacao.management.commands.process_emails import processar_arquivo_individual
-from django.utils.timezone import now
 from django.contrib.auth.decorators import login_required
-from django.shortcuts import render, get_object_or_404, redirect
-from .models import OficioEnel
-from django.contrib import messages
-from .forms import OficioEditForm # Certifique-se de que o import está correto
+
+# Imports do seu projeto
+from .models import OficioEnel, importar_itens_seguro
+from .forms import OficioEditForm
 from .utils_ia import extrair_dados_oficio
-from .models import importar_itens_seguro
-from django.shortcuts import render, get_object_or_404
-from .models import OficioEnel
-
-
 
 @login_required
 def exportar_oficios_csv(request):
-    # 1. Captura os mesmos filtros da tela de listagem
     termo_busca = request.GET.get('buscar')
     filtro_status = request.GET.get('status')
-
     oficios = OficioEnel.objects.all()
 
     if termo_busca:
@@ -41,49 +29,38 @@ def exportar_oficios_csv(request):
     if filtro_status and filtro_status != "Todos":
         oficios = oficios.filter(status_processamento=filtro_status)
 
-    # 2. Configura a resposta do navegador para baixar um arquivo CSV
     response = HttpResponse(content_type='text/csv; charset=utf-8')
     response['Content-Disposition'] = 'attachment; filename="relatorio_oficios.csv"'
 
-    # 3. Cria o escritor CSV e define o cabeçalho
-    writer = csv.writer(response, delimiter=';') # Usamos ponto e vírgula para abrir direto no Excel PT-BR
+    writer = csv.writer(response, delimiter=';')
     writer.writerow(['Protocolo', 'Municipio', 'Data Recebimento', 'Prazo', 'Status'])
 
-    # 4. Escreve os dados
     for oficio in oficios:
-        # Lógica manual de status caso o método automático falhe
         status_texto = "Concluído" if oficio.status_processamento == 1 else "Pendente"
-
         writer.writerow([
             oficio.numero_protocolo,
             oficio.municipio,
             oficio.data_recebimento,
             oficio.prazo if oficio.prazo else 'N/A',
-            status_texto  # Usamos a variável que criamos acima
+            status_texto
         ])
     return response
 
 @login_required
 def listagem_oficios(request):
-    # 1. Pega todos os ofícios inicialmente
     oficios = OficioEnel.objects.all().order_by('-data_recebimento')
-
-    # 2. Captura os termos de busca do formulário (via GET)
     termo_busca = request.GET.get('buscar')
     filtro_status = request.GET.get('status')
 
-    # 3. Aplica o filtro de texto (Protocolo ou Município/Órgão)
     if termo_busca:
         oficios = oficios.filter(
             Q(numero_protocolo__icontains=termo_busca) | 
             Q(municipio__icontains=termo_busca)
         )
 
-    # 4. Aplica o filtro de Status
     if filtro_status and filtro_status != "Todos":
         oficios = oficios.filter(status_processamento=filtro_status)
 
-    # 5. Cálculos para os Cards Superiores (refletindo os filtros)
     context = {
         'oficios': oficios,
         'total_oficios': OficioEnel.objects.count(),
@@ -93,13 +70,9 @@ def listagem_oficios(request):
     }
     return render(request, 'oficios_list.html', context)
 
-
 @login_required
 def monitoramento_view(request):
-    # Pega todos os ofícios salvos no banco, ordenados pelo mais recente
     oficios = OficioEnel.objects.all().order_by('-data_recebimento')
-    
-    # Filtro por Remetente ou Assunto (Barra central)
     busca_geral = request.GET.get('busca_geral')
     if busca_geral:
         oficios = oficios.filter(
@@ -107,11 +80,9 @@ def monitoramento_view(request):
             Q(assunto__icontains=busca_geral)
         )
 
-    # Filtro por Protocolo (Barra superior)
     protocolo = request.GET.get('protocolo')
     if protocolo:
         oficios = oficios.filter(numero_protocolo__icontains=protocolo)
-
 
     return render(request, 'monitoramento.html', {'oficios': oficios})
 
@@ -119,10 +90,8 @@ def monitoramento_view(request):
 def home_view(request):
     return render(request, 'home.html')
 
-
 @login_required
 def listagem_pendentes(request):
-    # Filtra apenas status 0 (Pendente) ou onde não há responsável/prazo
     oficios_pendentes = OficioEnel.objects.filter(
         Q(status_processamento=0) | Q(responsavel__isnull=True) | Q(prazo__isnull=True)
     ).order_by('-data_recebimento')
@@ -132,101 +101,91 @@ def listagem_pendentes(request):
         'titulo_pagina': 'Ofícios Pendentes de Dados'
     })
 
-
-
 @login_required
 def upload_manual(request):
     if request.method == 'POST':
         arquivos = request.FILES.getlist('arquivo')
-        fs = FileSystemStorage(location=os.path.join(settings.MEDIA_ROOT, 'anexos'))
+        
+        upload_dir = os.path.join(settings.MEDIA_ROOT, 'anexos')
+        if not os.path.exists(upload_dir):
+            os.makedirs(upload_dir)
+            
+        fs = FileSystemStorage(location=upload_dir)
         
         for f in arquivos:
-            # 1. Salva o arquivo no disco primeiro
+            # 1. Salva o arquivo fisicamente
             nome_salvo = fs.save(f.name, f)
             caminho_completo = fs.path(nome_salvo)
 
-            # 2. CHAMA A IA PARA LER O CONTEÚDO DO CLIENTE
+            # 2. IA processa o arquivo
             dados_ia = extrair_dados_oficio(caminho_completo)
             
-            # 3. Cria o registro no banco já com os dados que a IA extraiu
-            # Se a IA falhar, usamos os valores padrão (get)
+            if dados_ia is None:
+                messages.warning(request, f"A IA não conseguiu ler os dados de {f.name}.")
+                dados_ia = {}
+
+            # 3. Organiza o resumo da IA para o campo analise_ia
+            resumo_ia = (
+                f"DATA DO DOC: {dados_ia.get('data', 'Não identificada')}\n"
+                f"ÓRGÃO: {dados_ia.get('orgao_solicitante', 'Não identificado')}\n\n"
+                f"RESUMO DOS PEDIDOS:\n{dados_ia.get('pedidos_servicos', 'Nenhum detalhe extraído.')}"
+            )
+
+            # 4. Define o caminho relativo para o banco
+            caminho_relativo_db = os.path.join('anexos', nome_salvo)
+
+            # 5. Criação do registro (Agora com analise_ia existindo no banco)
             novo_oficio = OficioEnel.objects.create(
                 numero_protocolo=dados_ia.get("numero_protocolo", "NÃO ENCONTRADO"),
                 municipio=dados_ia.get("municipio", "NÃO ENCONTRADO"),
                 orgao_solicitante=dados_ia.get("orgao_solicitante", "NÃO ENCONTRADO"),
                 assunto=dados_ia.get("assunto", f"Upload Manual: {f.name}"),
+                analise_ia=resumo_ia, 
                 data_recebimento=now(),
                 remetente=request.user.username,
-                caminho_arquivo=nome_salvo,
+                caminho_arquivo=caminho_relativo_db,
                 status_processamento=0
             )
 
-            # 4. SE FOR EXCEL: Chama sua função do models.py para popular os itens detalhados
-            if f.name.endswith(('.xlsx', '.xls')):
+            # Lógica para Excel (Mantendo o seu try/except de segurança)
+            if f.name.lower().endswith(('.xlsx', '.xls')):
                 try:
                     importar_itens_seguro(caminho_completo, novo_oficio)
-                    messages.success(request, f"Planilha {f.name} e seus itens foram importados!")
+                    messages.success(request, f"Planilha {f.name} importada e vinculada!")
                 except Exception as e:
-                    messages.error(request, f"Erro ao importar itens da planilha: {e}")
+                    messages.error(request, f"Erro ao processar dados da planilha: {e}")
             else:
-                messages.success(request, f"Ofício {novo_oficio.numero_protocolo} processado com sucesso!")
+                messages.success(request, f"Ofício {novo_oficio.numero_protocolo} registrado!")
             
         return redirect('listagem_pendentes')
     
     return render(request, 'upload_manual.html')
-
-
-
 @login_required
 def editar_oficio(request, pk):
-    # 1. Busca o objeto ou retorna 404
     oficio = get_object_or_404(OficioEnel, pk=pk)
     
     if request.method == 'POST':
-        # 2. Preenche o formulário com os dados vindos do navegador
         form = OficioEditForm(request.POST, instance=oficio)
-        
         if form.is_valid():
-            # 3. Salva os dados básicos (Município, Protocolo, etc.)
             instancia = form.save(commit=False)
-            
-            # 4. LÓGICA INTELIGENTE: Se preencheu Prazo E Responsável, vira Concluído (1)
-            # Caso contrário, permanece como Pendente (0)
             if instancia.prazo and instancia.responsavel:
                 instancia.status_processamento = 1
-                messages.success(request, f"Ofício {instancia.numero_protocolo} CONCLUÍDO e atualizado!")
+                messages.success(request, f"Ofício {instancia.numero_protocolo} CONCLUÍDO!")
             else:
                 instancia.status_processamento = 0
-                messages.info(request, "Alterações salvas. Ofício continua como Pendente.")
+                messages.info(request, "Alterações salvas. Ofício continua Pendente.")
 
             instancia.save()
-            form.save_m2m() # Importante para campos ManyToMany, se houver
-            
-            # 5. Redireciona para a lista de pendentes
+            form.save_m2m()
             return redirect('listagem_pendentes')
         else:
-            # Em caso de erro no formulário
-            print(form.errors)
-            messages.error(request, "Erro ao validar os dados. Verifique os campos.")
+            messages.error(request, "Erro ao validar os dados.")
     else:
-        # 6. Método GET: Apenas exibe o formulário preenchido com os dados atuais
         form = OficioEditForm(instance=oficio)
     
-    # IMPORTANTE: Corrigido o caminho para 'automacao/editar_oficio.html'
-    return render(request, 'editar_oficio.html', {
-        'form': form, 
-        'oficio': oficio
-    })
+    return render(request, 'editar_oficio.html', {'form': form, 'oficio': oficio})
 
-
-
+@login_required
 def oficio_detalhe_fragmento(request, oficio_id):
-    # Procura o ofício pelo ID
     oficio = get_object_or_404(OficioEnel, id=oficio_id)
-    
-    # Renderiza apenas o fragmento do card lateral
-    return render(request, 'automacao/oficio_detalhe_fragmento.html', {
-        'oficio': oficio
-    })
-
-
+    return render(request, 'oficio_detalhe_fragmento.html', {'oficio': oficio})

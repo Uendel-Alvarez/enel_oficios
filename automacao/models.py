@@ -1,11 +1,10 @@
 from django.db import models
-from django.contrib.auth.models import User  # Certifique-se que é 'contrib'
+from django.contrib.auth.models import User
 from django.utils import timezone
 import pandas as pd
-
+import os
 
 class OficioEnel(models.Model):
-    
     data_recebimento = models.DateTimeField(auto_now_add=True)
     remetente = models.EmailField(max_length=255, null=True, blank=True)
     assunto = models.CharField(max_length=500, null=True, blank=True)
@@ -13,7 +12,11 @@ class OficioEnel(models.Model):
     numero_protocolo = models.CharField(max_length=100, null=True, blank=True)
     municipio = models.CharField(max_length=255, null=True, blank=True)
     quantidade_anexos = models.IntegerField(default=0)
+    analise_ia = models.TextField(null=True, blank=True, verbose_name="Análise Detalhada da IA")
+    
+    # Este campo guardará o caminho do "arquivo principal" (geralmente o PDF do Ofício)
     caminho_arquivo = models.CharField(max_length=255, null=True, blank=True)
+    
     STATUS_CHOICES = [
         (0, 'Pendente'),
         (1, 'Concluído'),
@@ -22,20 +25,31 @@ class OficioEnel(models.Model):
     responsavel = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Responsável")
     prazo = models.DateField("Prazo Limite", null=True, blank=True)
     orgao_solicitante = models.CharField(max_length=255, null=True, blank=True)
-   
-
-     # Método para ajudar o template a mostrar se está atrasado (como na foto)
+    agrupamento_enel = models.CharField(max_length=50, null=True, blank=True)
+    coordenadas_detectadas = models.CharField(max_length=255, null=True, blank=True)
+    
     @property
     def esta_atrasado(self):
-        if self.prazo and self.prazo < timezone.now().date() and self.status_processamento != 2: # 2 = Concluído
+        if self.prazo and self.prazo < timezone.now().date() and self.status_processamento != 1:
             return True
         return False
 
     def __str__(self):
-        return f"{self.numero_protocolo} - {self.municipio}"       
+        return f"{self.numero_protocolo} - {self.municipio}"
 
+# NOVA CLASSE: Permite que um Ofício tenha vários arquivos (PDF, Excel, Docx)
+class AnexoOficio(models.Model):
+    oficio = models.ForeignKey(OficioEnel, on_delete=models.CASCADE, related_name='anexos_arquivos')
+    arquivo = models.FileField(upload_to='anexos/')
+    nome_original = models.CharField(max_length=255)
+    data_upload = models.DateTimeField(auto_now_add=True)
 
+    def __str__(self):
+        return self.nome_original
 
+    @property
+    def extensao(self):
+        return os.path.splitext(self.arquivo.name)[1].lower()
 
 class ItemPlanilhaEnel(models.Model):
     oficio_pai = models.ForeignKey(OficioEnel, on_delete=models.CASCADE, related_name='itens')
@@ -75,14 +89,13 @@ class ItemPlanilhaEnel(models.Model):
     foto_geo = models.CharField(max_length=255, null=True, blank=True)
     observacao = models.TextField(null=True, blank=True)
 
-
 MAPEAMENTO_ESTRITUALIZADO = {
     'IDG': 'idg',
     'Endereço': 'endereco',
     'Bairro': 'bairro',
     'Município': 'municipio',
     'Tipo logradouro': 'tipo_logradouro',
-    'Latitude': 'latitude', # Simplificado para evitar erro do texto longo 
+    'Latitude': 'latitude', 
     'Longitude': 'longitude',
     'Tipo Lâmpada Anterior': 'tipo_lampada_anterior',
     'Potência Anterior': 'potencia_anterior',
@@ -110,30 +123,26 @@ MAPEAMENTO_ESTRITUALIZADO = {
     'Observação': 'observacao'
 }
 
-
 def importar_itens_seguro(caminho_excel, oficio_obj):
-    df = pd.read_excel(caminho_excel)
-    # Deixa as colunas do Excel limpas de espaços e em formato string
-    df.columns = [str(c).strip() for c in df.columns]
+    try:
+        df = pd.read_excel(caminho_excel)
+        df.columns = [str(c).strip() for c in df.columns]
 
-    for _, row in df.iterrows():
-        dados = {'oficio_pai': oficio_obj}
-        
-        for nome_excel, campo_model in MAPEAMENTO_ESTRITUALIZADO.items():
-            # Tenta achar a coluna que CONTÉM o nome (ex: acha "Latitude..." por "Latitude")
-            coluna_real = next((c for c in df.columns if nome_excel in c), None)
+        for _, row in df.iterrows():
+            dados = {'oficio_pai': oficio_obj}
+            for nome_excel, campo_model in MAPEAMENTO_ESTRITUALIZADO.items():
+                coluna_real = next((c for c in df.columns if nome_excel in c), None)
+                if coluna_real:
+                    valor = row[coluna_real]
+                    if campo_model == 'data_modificacao' and pd.notnull(valor):
+                        valor = pd.to_datetime(valor).date()
+                    if campo_model in ['idg', 'numero_uc', 'numero_plaqueta']:
+                        try:
+                            valor = int(float(valor)) if pd.notnull(valor) else 0
+                        except:
+                            valor = 0
+                    dados[campo_model] = valor
             
-            if coluna_real:
-                valor = row[coluna_real]
-                
-                # Tratamento de Data 
-                if campo_model == 'data_modificacao' and pd.notnull(valor):
-                    valor = pd.to_datetime(valor).date()
-                
-                # Tratamento de Números 
-                if campo_model in ['idg', 'numero_uc', 'numero_plaqueta']:
-                    valor = int(valor) if pd.notnull(valor) else 0
-                
-                dados[campo_model] = valor
-        
-        ItemPlanilhaEnel.objects.create(**dados)
+            ItemPlanilhaEnel.objects.create(**dados)
+    except Exception as e:
+        print(f"Erro na importação de itens: {e}")

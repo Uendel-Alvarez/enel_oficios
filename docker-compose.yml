@@ -13,6 +13,7 @@ services:
     command: python manage.py runserver 0.0.0.0:8000
     volumes:
       - .:/app
+      - ./media:/app/media  # Mapeia a pasta media para o Windows
     ports:
       - "8000:8000"
     env_file:
@@ -29,6 +30,7 @@ services:
     command: celery -A core worker -l info
     volumes:
       - .:/app
+      - ./media:/app/media  # Garante que o robô salve na pasta certa
     env_file:
       - .env
     depends_on:
@@ -42,6 +44,7 @@ services:
     command: celery -A core beat -l info
     volumes:
       - .:/app
+      - ./media:/app/media  # Permite que o agendador veja os arquivos se necessário
     env_file:
       - .env
     depends_on:
